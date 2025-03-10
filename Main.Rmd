@@ -3,7 +3,279 @@ title: "Main"
 output: html_document
 ---
 
+## Load Datasets and Libraries
+
+```{r load-stuff}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r pre-process}
+sudors <- read.csv("sudors-data.csv")
+cdc <- read.csv('data-table.csv')
+
+```
+
+## Processing
+
+
+### Policy 1: Sudors
+```{r policy1-SUDORS}
+
+# Define the list of all states
+states <- c("Alaska", "Arizona", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Georgia", 
+            "Hawaii", "Iowa", "Kansas", "Kentucky", "Maine", "Maryland", "Massachusetts", "Michigan", 
+            "Minnesota", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", 
+            "North Carolina", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "Tennessee", 
+            "Utah", "Vermont", "Virginia", "West Virginia")
+
+# POLICY 1
+treatment_states <- c("Colorado", "Connecticut", "Delaware", "Georgia", "Hawaii", "Maine", "Maryland", "Montana", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "Ohio", "Oregon", "Tennessee", "Vermont", "Virginia", "West Virginia")
+
+# Create a data frame with a 1 for treatment states and 0 for others
+sudors_policy1 <- data.frame(
+  Jurisdiction = states,
+  strat1 = ifelse(states %in% treatment_states, 1, 0)
+)
+
+sudors_policy1 <- merge(sudors_policy1, sudors, by="Jurisdiction")
+
+```
+
+### Policy 1: NCHS
+```{r policy1-NCHS}
+
+# Define the list of all states
+states <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY")
+
+# POLICY 1
+treatment_states <- c("ME", "VT", "NH", "CT", "NJ", "DE", "MD", "DC", "MD", "VA", "WV", "OH", "IN", "IL", "VA", "TN", "GA", "FL", "MO", "LA", "AR", "MT", "SD", "CO", "NM", "CA", "NV", "OR")
+
+# Create a data frame with a 1 for treatment states and 0 for others
+nchs_policy1 <- data.frame(
+  STATE = states,
+  strat1 = ifelse(states %in% treatment_states, 1, 0)
+)
+
+nchs_policy1 <- merge(nchs_policy1, cdc, by="STATE")
+```
+
+
+### Policy 2: Sudors
+```{r policy2-SUDORS}
+
+# Define the list of all states
+states <- c("Alaska", "Arizona", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Georgia", 
+            "Hawaii", "Iowa", "Kansas", "Kentucky", "Maine", "Maryland", "Massachusetts", "Michigan", 
+            "Minnesota", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", 
+            "North Carolina", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "Tennessee", 
+            "Utah", "Vermont", "Virginia", "West Virginia")
+
+# Define the states requiring access to medication for addiction treatment (purple states)
+treatment_states <- c("Alaska", "Nevada", "Utah", "Colorado", "New Mexico", "Ohio", "Pennsylvania", 
+                      "New York", "New Jersey", "Connecticut", "Delaware", "Maryland", "Massachusetts", 
+                      "Rhode Island", "Vermont", "New Hampshire")
+
+# Create a data frame with a 1 for treatment states and 0 for others
+sudors_policy2 <- data.frame(
+  Jurisdiction = states,
+  strat4 = ifelse(states %in% treatment_states, 1, 0)
+)
+
+sudors_policy2 <- merge(sudors_policy2, sudors, by="Jurisdiction")
+
+```
+
+### Policy 3: NCHS
+```{r}
+# Define the list of all states
+states <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY")
+
+decrim_states <- c("AK", "CA", "AZ", "NM", "CO", "TX", "NE", "SD", "IA", "WI", "IL", "TN", "WV", "GA", "FL", "SC", "NH")
+
+cdc_policy <- data.frame(
+  STATE = states,
+  stratdecrim = ifelse(states %in% decrim_states, 1, 0)
+)
+
+# Merge with previous data frame sudors
+cdc_policy <- merge(cdc_policy, cdc, by = "STATE")
+
+```
+
+
+### Policy3 SUDORS
+```{r}
+# Define the list of all states
+states <- c("Alaska", "Arizona", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Georgia", 
+            "Hawaii", "Iowa", "Kansas", "Kentucky", "Maine", "Maryland", "Massachusetts", "Michigan", 
+            "Minnesota", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", 
+            "North Carolina", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "Tennessee", 
+            "Utah", "Vermont", "Virginia", "West Virginia")
+
+naloxone_states <- c("Oregon", "Kansas", "Texas", "Kentucky", "Maryland", "New York", "Vermont", "New Hampshire", "Massachusetts", "Rhode Island", "Maine")
+
+# Create a data frame with a 1 for naloxone states and 0 for others
+sudors_policy3 <- data.frame(
+  Jurisdiction = states,
+  stratdecrim = ifelse(states %in% naloxone_states, 1, 0)
+)
+
+# Merge with previous data frame sudors
+sudors_policy3 <- merge(sudors_policy3, sudors, by = "Jurisdiction")
+
+```
+## Correlational Tests
+
+### Hypothesis 1
+States who support policy 1 have less average drug rates than other states over the time period in the datasets
+
+```{r hypothesis1}
+support <- sudors_policy1 %>%
+  filter(strat1 == 1)
+
+no_support <- sudors_policy1 %>%
+  filter(strat1 == 0)
+
+test <- t.test(support$alldrug_rate, no_support$alldrug_rate, alternative = 'less')
+test
+```
+### Hypothesis 2
+
+### Hypothesis 1
+States who support policy 1 have less average drug rates than other states over the time period in the datasets
+
+```{r hypothesi1}
+support <- nchs_policy1 %>%
+  filter(strat1 == 1)
+
+no_support <- nchs_policy1 %>%
+  filter(strat1 == 0)
+
+test <- t.test(support$RATE, no_support$RATE, alternative = 'less')
+test
+```
+```{r hypothesis1-SUDORS}
+#support <- sudors_policy1 %>%
+  #filter(strat1 == 1)
+
+#no_support <- sudors_policy1 %>%
+ # filter(strat1 == 0)
+
+#test <- t.test(support$RATE, no_support$RATE, alternative = 'less')
+#test
+```
+
+### Hypothesis 2
 ```{r}
 
-cat("yoyoyo")
+support <- sudors_policy2 %>%
+  filter(strat4 == 1)
+
+no_support <- sudors_policy2 %>%
+  filter(strat4 == 0)
+
+test <- t.test(support$age_15_24_rate, no_support$age_15_24_rate, alternative = 'less')
+test
+```
+
+### Hypothesis 3
+```{r}
+
+support <- sudors_policy3 %>%
+  filter(stratdecrim == 1)
+
+no_support <- sudors_policy3 %>%
+  filter(stratdecrim == 0)
+
+test <- t.test(support$age_15_24_rate, no_support$age_15_24_rate, alternative = 'less')
+test
+```
+
+
+## Linear Modeling 
+```{r fig.height=10, fig.width=12}
+# SIGNIFICANT
+cdc_policy$YEAR <- as.numeric(cdc_policy$YEAR)
+
+cdc_2020 <- cdc_policy %>%
+  filter(YEAR < 2020)
+
+# Not including until after 2020
+coeffs <- cdc_2020 %>%
+  group_by(STATE, stratdecrim) %>%
+  do({
+    model <- lm(RATE ~ YEAR, data = .)
+    data.frame(Intercept = coef(model)[1], Slope = coef(model)[2])
+  })
+
+coeffs <- coeffs %>%
+  arrange(Slope)
+
+print(coeffs)
+
+coeffs_one <- coeffs %>%
+  filter(stratdecrim == 1)
+  
+mean(coeffs_one$Slope)
+
+coeffs_two <- coeffs %>%
+  filter(stratdecrim == 0)
+  
+mean(coeffs_two$Slope, na.rm = TRUE)
+
+
+
+
+
+
+
+
+
+# Including after 2020
+coeffs <- cdc_policy %>%
+  group_by(STATE, stratdecrim) %>%
+  do({
+    model <- lm(RATE ~ YEAR, data = .)
+    data.frame(Intercept = coef(model)[1], Slope = coef(model)[2])
+  })
+
+coeffs <- coeffs %>%
+  arrange(Slope)
+
+print(coeffs)
+
+coeffs_one <- coeffs %>%
+  filter(stratdecrim == 1)
+  
+mean(coeffs_one$Slope)
+
+coeffs_two <- coeffs %>%
+  filter(stratdecrim == 0)
+  
+mean(coeffs_two$Slope, na.rm = TRUE)
+
+# Pvalue
+library(dplyr)
+
+coeffs <- cdc %>%
+  group_by(STATE) %>%
+  do({
+    model <- lm(RATE ~ YEAR, data = .)
+    summary_model <- summary(model)
+    data.frame(
+      Intercept = coef(model)[1],
+      Slope = coef(model)[2],
+      R_Squared = summary_model$r.squared,
+      P_Value = summary_model$coefficients[, 4]  # Extract p-value for Slope
+    )
+  })
+
+print(coeffs)
+
+ggplot(cdc, aes(YEAR, RATE)) +
+  geom_point() + 
+  geom_smooth(method='lm') + facet_wrap(~STATE) + geom_vline(xintercept = 2020)
+
+
 ```
